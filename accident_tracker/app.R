@@ -2,7 +2,7 @@ library(shiny)
 library(leaflet)
 library(tidyverse)
 
-US_Accidents <- read_csv("../data/US_Accidents_Dec20_updated.csv")
+US_Accidents <- read_csv("../data/US_Accidents2019.csv")
 
 ui <- fluidPage(
   titlePanel("US Car Accidents"),
