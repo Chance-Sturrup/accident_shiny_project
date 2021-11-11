@@ -2,7 +2,7 @@ library(shiny)
 library(leaflet)
 library(tidyverse)
 
-us_accidents <- read_csv("../data/US_Accidents2019.csv")
+# us_accidents <- read_csv("../data/US_Accidents2019.csv")
 
 source("R/ui.R")
 
