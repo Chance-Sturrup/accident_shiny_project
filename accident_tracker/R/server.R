@@ -1,8 +1,25 @@
 server <- function(input, output, session) {
   us_accidents <- read_csv("../data/US_Accidents2019.csv")
+  us_accidents <- na.omit(us_accidents)
+  us_accidents <- us_accidents %>% separate(Start_Time, c("Year", "Month","Date","Actualtime"))
   # server not seeing us_accidents dataframe unless included in server.R script
   # consider including dataset in package to avoid
   output$mymap <- renderLeaflet({
+    if (input$sunrise != "All") {
+      us_accidents <- filter(us_accidents, us_accidents$Sunrise_Sunset ==input$sunrise)
+    }
+    if (input$weather != "All") {
+      us_accidents <- filter(us_accidents, us_accidents$Weather_Condition == input$weather)
+    }
+    if (input$month != "All") {
+      us_accidents <- filter(us_accidents, us_accidents$Month == input$month)
+    }
+    if (input$date != "All") {
+      us_accidents <- filter(us_accidents, us_accidents$Date == input$date)
+    }
+    if (input$actualtime != "All") {
+      us_accidents <- filter(us_accidents, us_accidents$Actualtime == input$actualtime)
+    }
     if (input$color == "None") {
       selectedColor <- "Black"
       colorPal <- colorBin(selectedColor, domain = NULL)
@@ -19,7 +36,6 @@ server <- function(input, output, session) {
       data = us_accidents$`Temperature(F)`
       legend = "Temperature (F)"
     }
-    
     #colorPal <- colorBin(selectedColor, domain = data)
     
     leaflet(data = us_accidents, # change df to accidents if using data in package
