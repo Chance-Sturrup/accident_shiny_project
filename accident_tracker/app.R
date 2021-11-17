@@ -63,7 +63,8 @@ ui <- fluidPage(
            filtermonth(),
            filterdate(),
            filtertime()
-    )
+    ),
+    submitButton("Apply Changes")
   )
 )
 
