@@ -7,7 +7,7 @@ library(accidenttracker)
 #Creates UI selecter to choos how the data points on the map are colored 
 colorSelect <- function() {
   selectInput("color", label = "Color the Data by:",
-              c("None", "Severity", "Temperature (F)"))
+              c("None", "Severity", "Temperature (F)", "Precipitation", "Visibility"))
 }
 #Filtering function
 #Filter and reorganize the input options
@@ -92,7 +92,7 @@ server <- function(input, output, session) {
       legend = NULL
     }
     if (input$color == "Severity") {
-      colorPal <- colorBin("OrRd", domain = us_accidents$severity)
+      colorPal <- colorBin("YlOrRd", domain = us_accidents$severity)
       colorData = us_accidents$severity
       legend = "Accident Severity"
     }
@@ -101,7 +101,21 @@ server <- function(input, output, session) {
       colorData = us_accidents$temp
       legend = "Temperature (F)"
     }
-   
+   if (input$color == "Precipitation") {
+     colorPal <- colorBin("BrBG", domain = us_accidents$precip)
+     colorData <- us_accidents%>%precip
+     legend = "Precipitation"
+   }
+#   if (input$color == "Day/Night") {
+#     colorPal <- colorBin("OrRd", domain = us_accidents$day.night)
+#     colorData <- us_accidents %>%day.night
+#     legend = "Day/Night"
+#   }
+   if (input$color == "Visibility") {
+     colorPal <- colorBin("YlGnBu", domain = us_accidents$vis)
+     colorData = us_accidents$vis
+     legend = "Visibility"
+   }
    isolate({
      if ("mymap_center" %in% names(input)) {
        mapparams <- list(center = input$mymap_center,
@@ -128,7 +142,6 @@ server <- function(input, output, session) {
       ) %>%
       addLegend("bottomright", pal = colorPal, values = data,
                 title = legend,
-                bins = 7,
                 opacity = 1)
   })
   
