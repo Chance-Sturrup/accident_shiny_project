@@ -100,11 +100,22 @@ server <- function(input, output, session) {
       colorData = us_accidents$temp
       legend = "Temperature (F)"
     }
+   
+   isolate({
+     if ("mymap_center" %in% names(input)) {
+       mapparams <- list(center = input$mymap_center,
+                         zoom = input$mymap_zoom)
+     } else {
+       mapparams <- list(center = list(lng=-86.5804, lat=35.5175),
+                         zoom = 7)
+     }
+   })
+   
     #colorPal <- colorBin(selectedColor, domain = data)
     
     leaflet(data = us_accidents,
             options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
-      setView(-86.5804, 35.5175, 7) %>%
+      setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
       addTiles() %>%
       addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 5,
                        color = ~ colorPal(colorData),
