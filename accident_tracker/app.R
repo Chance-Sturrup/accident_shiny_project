@@ -16,6 +16,7 @@ us_accidents <- rmv_mssng_accidents %>%
   separate(time, c("year", "month","date","actual.time"))
 
 #Creates UI selecter to choose filtering options
+# Rename to select_columnname
 filtersunrise <- function() {
   selectInput(inputId = "sunrise", label = "Sunrise/Sunset:",
               c("All",
@@ -69,6 +70,9 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
  output$mymap <- renderLeaflet({
+   # Change each if statement to a function called filter_columnname
+   # Then nest all into function filter_dataset? Is that more complicated?
+   # Might make the graph tab easier if in their own function?
     if (input$sunrise != "All") {
       us_accidents <- filter(us_accidents, us_accidents$day.night == input$sunrise)
     }
