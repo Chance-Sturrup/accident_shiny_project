@@ -87,17 +87,17 @@ server <- function(input, output, session) {
     if (input$color == "None") {
       selectedColor <- "Black"
       colorPal <- colorBin(selectedColor, domain = NULL)
-      data = NULL
+      colorData = NULL
       legend = NULL
     }
     if (input$color == "Severity") {
       colorPal <- colorBin("OrRd", domain = us_accidents$severity)
-      data = us_accidents$severity
+      colorData = us_accidents$severity
       legend = "Accident Severity"
     }
     if (input$color == "Temperature (F)") {
       colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp)
-      data = us_accidents$temp
+      colorData = us_accidents$temp
       legend = "Temperature (F)"
     }
     #colorPal <- colorBin(selectedColor, domain = data)
@@ -107,9 +107,8 @@ server <- function(input, output, session) {
       setView(-86.5804, 35.5175, 7) %>%
       addTiles() %>%
       addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 5,
-                       color = ~ colorPal(data),
+                       color = ~ colorPal(colorData),
                        fillOpacity = 0.7,
-                       # change variable names if using data from package
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
