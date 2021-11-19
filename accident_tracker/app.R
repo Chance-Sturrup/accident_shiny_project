@@ -7,7 +7,7 @@ library(accidenttracker)
 #Creates UI selecter to choos how the data points on the map are colored 
 colorSelect <- function() {
   selectInput("color", label = "Color the Data by:",
-              c("None", "Severity", "Temperature (F)"))
+              c("None", "Severity", "Temperature (F)", "Precipitation", "Visibility"))
 }
 #Filtering function
 #Filter and reorganize the input options
@@ -63,7 +63,8 @@ ui <- fluidPage(
            filtermonth(),
            filterdate(),
            filtertime()
-    )
+    ),
+    submitButton("Apply Changes")
   )
 )
 
@@ -87,29 +88,53 @@ server <- function(input, output, session) {
     if (input$color == "None") {
       selectedColor <- "Black"
       colorPal <- colorBin(selectedColor, domain = NULL)
-      data = NULL
+      colorData = NULL
       legend = NULL
     }
     if (input$color == "Severity") {
-      colorPal <- colorBin("OrRd", domain = us_accidents$severity)
-      data = us_accidents$severity
+      colorPal <- colorBin("YlOrRd", domain = us_accidents$severity)
+      colorData = us_accidents$severity
       legend = "Accident Severity"
     }
     if (input$color == "Temperature (F)") {
       colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp)
-      data = us_accidents$temp
+      colorData = us_accidents$temp
       legend = "Temperature (F)"
     }
+   if (input$color == "Precipitation") {
+     colorPal <- colorBin("BrBG", domain = us_accidents$precip)
+     colorData <- us_accidents%>%precip
+     legend = "Precipitation"
+   }
+#   if (input$color == "Day/Night") {
+#     colorPal <- colorBin("OrRd", domain = us_accidents$day.night)
+#     colorData <- us_accidents %>%day.night
+#     legend = "Day/Night"
+#   }
+   if (input$color == "Visibility") {
+     colorPal <- colorBin("YlGnBu", domain = us_accidents$vis)
+     colorData = us_accidents$vis
+     legend = "Visibility"
+   }
+   isolate({
+     if ("mymap_center" %in% names(input)) {
+       mapparams <- list(center = input$mymap_center,
+                         zoom = input$mymap_zoom)
+     } else {
+       mapparams <- list(center = list(lng=-86.5804, lat=35.5175),
+                         zoom = 7)
+     }
+   })
+   
     #colorPal <- colorBin(selectedColor, domain = data)
     
     leaflet(data = us_accidents,
             options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
-      setView(-86.5804, 35.5175, 7) %>%
+      setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
       addTiles() %>%
       addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 5,
-                       color = ~ colorPal(data),
+                       color = ~ colorPal(colorData),
                        fillOpacity = 0.7,
-                       # change variable names if using data from package
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
@@ -117,7 +142,6 @@ server <- function(input, output, session) {
       ) %>%
       addLegend("bottomright", pal = colorPal, values = data,
                 title = legend,
-                bins = 7,
                 opacity = 1)
   })
   
