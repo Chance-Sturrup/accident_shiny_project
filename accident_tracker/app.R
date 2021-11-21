@@ -2,7 +2,7 @@ library(shiny)
 library(leaflet)
 library(tidyverse)
 library(accidenttracker)
-
+source("DataOrganize.R")
 #colorSelect Function
 #Creates UI selecter to choos how the data points on the map are colored 
 colorSelect <- function() {
@@ -11,9 +11,7 @@ colorSelect <- function() {
 }
 #Filtering function
 #Filter and reorganize the input options
-rmv_mssng_accidents <- na.omit(accidents)
-us_accidents <- rmv_mssng_accidents %>% 
-  separate(time, c("year", "month","date","actual.time"))
+us_accidents <- DataOrganize(accidents)
 
 #Creates UI selecter to choose filtering options
 filtersunrise <- function() {
@@ -25,27 +23,22 @@ filtersunrise <- function() {
 filterweather <- function() {     
   selectInput(inputId = "weather", label = "Weather:",
               c("All",
-                sort(unique(as.character(us_accidents$wthr.cond)))
+                sort(unique(as.character(us_accidents$Weather)))
               )
   )}
 filtermonth <- function() {                     
-  selectInput(inputId = "month", label = "Month:",
-              c("All",
-                sort(unique(as.character(us_accidents$month)))
-              )
+  checkboxGroupInput(inputId = "month", label = "Month:",
+                     c(
+                       sort(unique(as.character(us_accidents$Month)))
+                     )
   )}
-filterdate <- function() {     
-  selectInput(inputId = "date", label = "Date:",
-              c("All",
-                sort(unique(as.character(us_accidents$date)))
-              )
-  )}
+
 filtertime <- function() {     
-  selectInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
-              c("All",
-                sort(unique(as.character(us_accidents$actual.time)))
-              )
-  )}
+  sliderInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
+              min = 0, max = 23,
+              value = c(0,23)
+  )
+}
 
 ui <- fluidPage(
   titlePanel("US Car Accidents in 2019"),
@@ -53,16 +46,16 @@ ui <- fluidPage(
     leafletOutput(outputId = "mymap"),
     #Execute colorSelect function to make UI selector
     column(4,
-           colorSelect()),
+           colorSelect(),
+           filtertime()
+    ),
     #Execute filtering functions
     column(4,
            filtersunrise(),
            filterweather()
     ),
     column(4,
-           filtermonth(),
-           filterdate(),
-           filtertime()
+           filtermonth()
     ),
     submitButton("Apply Changes")
   )
@@ -70,21 +63,18 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
  output$mymap <- renderLeaflet({
-    if (input$sunrise != "All") {
-      us_accidents <- filter(us_accidents, us_accidents$day.night == input$sunrise)
-    }
-    if (input$weather != "All") {
-      us_accidents <- filter(us_accidents, us_accidents$wthr.cond == input$weather)
-    }
-    if (input$month != "All") {
-      us_accidents <- filter(us_accidents, us_accidents$month == input$month)
-    }
-    if (input$date != "All") {
-      us_accidents <- filter(us_accidents, us_accidents$date == input$date)
-    }
-    if (input$actualtime != "All") {
-      us_accidents <- filter(us_accidents, us_accidents$actual.time == input$actualtime)
-    }
+   if (input$sunrise != "All") {
+     us_accidents <- filter(us_accidents, us_accidents$day.night ==input$sunrise)
+   }
+   if (input$weather != "All") {
+     us_accidents <- filter(us_accidents, us_accidents$Weather == input$weather)
+   }
+   if (is.null(input$month) == FALSE) {
+     us_accidents <- filter(us_accidents, us_accidents$Month %in% input$month)
+   }
+   if (is.null(input$actualtime) == FALSE) {
+     us_accidents <- filter(us_accidents, us_accidents$Actualtime >= input$actualtime[1] & us_accidents$Actualtime <= input$actualtime[2])
+   }
     if (input$color == "None") {
       selectedColor <- "Black"
       colorPal <- colorBin(selectedColor, domain = NULL)
@@ -127,7 +117,13 @@ server <- function(input, output, session) {
    })
    
     #colorPal <- colorBin(selectedColor, domain = data)
-    
+   labels <- sprintf(
+     "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
+     "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
+     "Time of accident: ",us_accidents$Accident_Time,
+     "Weather: ",us_accidents$wthr.cond
+   ) %>% lapply(htmltools::HTML)
+   
     leaflet(data = us_accidents,
             options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
@@ -138,7 +134,12 @@ server <- function(input, output, session) {
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
-                                                             spiderfyOnMaxZoom = FALSE) 
+                                                             spiderfyOnMaxZoom = FALSE),
+                       label =labels,
+                       labelOptions = labelOptions(
+                         style = list("font-weight" = "normal", padding = "3px 8px"),
+                         textsize = "11px",
+                         direction = "auto")
       ) %>%
       addLegend("bottomright", pal = colorPal, values = data,
                 title = legend,
