@@ -38,25 +38,49 @@ filtertime <- function() {
               multiple = TRUE
   )}
 
-ui <- fluidPage(
-  titlePanel("US Car Accidents in 2019"),
-  mainPanel(#this will create a space for us to display our map
-    leafletOutput(outputId = "mymap"),
-    #Execute colorSelect function to make UI selector
-    column(4,
-           colorSelect()
-    ),
-    #Execute filtering functions
-    column(4,
-           filtersunrise(),
-           filterweather()
-    ),
-    column(4,
-           filtermonth(),
-           filtertime()
-    ),
-    submitButton("Apply Changes")
-  )
+ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
+                tabsetPanel(
+                  tabPanel("Map", fluid = TRUE,
+                           mainPanel(#this will create a space for us to display our map
+                             leafletOutput(outputId = "mymap"),
+                             #Execute colorSelect function to make UI selector
+                             column(4,
+                                    colorSelect()
+                             ),
+                             #Execute filtering functions
+                             column(4,
+                                    filtersunrise(),
+                                    filterweather()
+                             ),
+                             column(4,
+                                    filtermonth(),
+                                    filtertime()
+                             ),
+                             submitButton("Apply Changes")
+                           )
+                  ),
+                  tabPanel(
+                    "Plot",
+                    fluid = TRUE,
+                    mainPanel(
+                      plotOutput(outputId = "plot"),
+                      selectInput(
+                        "plotby",
+                        label = "Plot By:",
+                        c("Temperature" = "temp",
+                          "Pressure" = "pressure",
+                          "Visibility" = "vis",
+                          "Wind speed" = "wind.spd",
+                          "State" = "state",
+                          "Day/Night" = "day.night",
+                          "Wind Direction" = "wind.dir",
+                          "Side of Road" = "side"
+                        )
+                      ),
+                      submitButton("Apply Changes")
+                    )
+                  )
+                )
 )
 
 server <- function(input, output, session) {
@@ -113,7 +137,6 @@ server <- function(input, output, session) {
       }
     })
     
-    #colorPal <- colorBin(selectedColor, domain = data)
     labels <- sprintf(
       "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
       "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
@@ -143,7 +166,10 @@ server <- function(input, output, session) {
                 title = legend,
                 opacity = 1)
   })
-  
+  output$plot <- renderPlot({
+    ggplot(us_accidents, aes_string(input$plotby)) +
+      geom_bar(width=1)
+  })
 }
 
 shinyApp(ui, server)
