@@ -27,18 +27,16 @@ filterweather <- function() {
               )
   )}
 filtermonth <- function() {                     
-  checkboxGroupInput(inputId = "month", label = "Month:",
-                     c(
-                       sort(unique(as.character(us_accidents$Month)))
-                     )
+  selectInput(inputId = "month", label = "Month:",
+                     choices =c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),
+                     multiple = TRUE
   )}
 
 filtertime <- function() {     
-  sliderInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
-              min = 0, max = 23,
-              value = c(0,23)
-  )
-}
+  selectInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
+              choices = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23),
+              multiple = TRUE
+  )}
 
 ui <- fluidPage(
   titlePanel("US Car Accidents in 2019"),
@@ -46,8 +44,7 @@ ui <- fluidPage(
     leafletOutput(outputId = "mymap"),
     #Execute colorSelect function to make UI selector
     column(4,
-           colorSelect(),
-           filtertime()
+           colorSelect()
     ),
     #Execute filtering functions
     column(4,
@@ -55,7 +52,8 @@ ui <- fluidPage(
            filterweather()
     ),
     column(4,
-           filtermonth()
+           filtermonth(),
+           filtertime()
     ),
     submitButton("Apply Changes")
   )
@@ -70,10 +68,10 @@ server <- function(input, output, session) {
      us_accidents <- filter(us_accidents, us_accidents$Weather == input$weather)
    }
    if (is.null(input$month) == FALSE) {
-     us_accidents <- filter(us_accidents, us_accidents$Month %in% input$month)
+     us_accidents <- filter(us_accidents, us_accidents$month %in% input$month)
    }
    if (is.null(input$actualtime) == FALSE) {
-     us_accidents <- filter(us_accidents, us_accidents$Actualtime >= input$actualtime[1] & us_accidents$Actualtime <= input$actualtime[2])
+     us_accidents <- filter(us_accidents, us_accidents$hour %in% input$actualtime)
    }
     if (input$color == "None") {
       selectedColor <- "Black"
@@ -120,7 +118,7 @@ server <- function(input, output, session) {
    labels <- sprintf(
      "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
      "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
-     "Time of accident: ",us_accidents$Accident_Time,
+     "Time of accident: ",us_accidents$time,
      "Weather: ",us_accidents$wthr.cond
    ) %>% lapply(htmltools::HTML)
    
