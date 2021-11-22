@@ -22,12 +22,12 @@ filtersunrise <- function() {
   )}
 filterweather <- function() {     
   selectInput(inputId = "weather", label = "Weather:",
-              c("All",
-                sort(unique(as.character(us_accidents$Weather)))
-              )
+              c(
+                sort(unique(as.character(us_accidents$Weather)))),
+              multiple = TRUE
   )}
 filtermonth <- function() {                     
-  selectInput(inputId = "month", label = "Month:",
+  selectInput(inputId = "Month", label = "Month:",
                      choices =c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),
                      multiple = TRUE
   )}
@@ -64,11 +64,11 @@ server <- function(input, output, session) {
    if (input$sunrise != "All") {
      us_accidents <- filter(us_accidents, us_accidents$day.night ==input$sunrise)
    }
-   if (input$weather != "All") {
-     us_accidents <- filter(us_accidents, us_accidents$Weather == input$weather)
+   if (is.null(input$weather) == FALSE) {
+     us_accidents <- filter(us_accidents, us_accidents$Weather %in% input$weather)
    }
-   if (is.null(input$month) == FALSE) {
-     us_accidents <- filter(us_accidents, us_accidents$month %in% input$month)
+   if (is.null(input$Month) == FALSE) {
+     us_accidents <- filter(us_accidents, us_accidents$month %in% input$Month)
    }
    if (is.null(input$actualtime) == FALSE) {
      us_accidents <- filter(us_accidents, us_accidents$hour %in% input$actualtime)
