@@ -147,7 +147,7 @@ server <- function(input, output, session) {
     leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
       addTiles() %>%
-      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 5,
+      addCircleMarkers(data = us_accidents, lng = ~ lng, lat = ~ lat, radius = 5,
                        color = ~ colorPal(colorData),
                        fillOpacity = 0.7,
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
