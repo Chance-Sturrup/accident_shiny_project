@@ -1,6 +1,0 @@
----
-title: "testR"
-output: github_document
----
-
-This is a test of the right repository
