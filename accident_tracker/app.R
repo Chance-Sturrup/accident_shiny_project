@@ -2,42 +2,41 @@ library(shiny)
 library(leaflet)
 library(tidyverse)
 library(accidenttracker)
-source("DataOrganize.R")
+
+us_accidents <- accidents
 #colorSelect Function
 #Creates UI selecter to choos how the data points on the map are colored 
-colorSelect <- function() {
-  selectInput("color", label = "Color the Data by:",
-              c("None", "Severity", "Temperature (F)", "Precipitation", "Visibility", "Day/Night"))
-}
-#Filtering function
-#Filter and reorganize the input options
-us_accidents <- DataOrganize(accidents)
+#colorSelect <- function() {
+#  selectInput("color", label = "Color the Data by:",
+#              c("None", "Severity", "Temperature (F)", "Precipitation", "Visibility", "Day/Night"))
+#}
+
 
 #Creates UI selecter to choose filtering options
 # Rename to select_columnname
-filtersunrise <- function() {
-  selectInput(inputId = "sunrise", label = "Sunrise/Sunset:",
-              c("All",
-                sort(unique(as.character(us_accidents$day.night)))
-              )
-  )}
-filterweather <- function() {     
-  selectInput(inputId = "weather", label = "Weather:",
-              c(
-                sort(unique(as.character(us_accidents$Weather)))),
-              multiple = TRUE
-  )}
-filtermonth <- function() {                     
-  selectInput(inputId = "Month", label = "Month:",
-              choices =c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),
-              multiple = TRUE
-  )}
+#filtersunrise <- function() {
+#  selectInput(inputId = "sunrise", label = "Sunrise/Sunset:",
+#              c("All",
+#                sort(unique(as.character(us_accidents$day.night)))
+#              )
+#  )}
+#filterweather <- function() {     
+#  selectInput(inputId = "weather", label = "Weather:",
+#              c(
+#                sort(unique(as.character(us_accidents$Weather)))),
+#              multiple = TRUE
+#  )}
+#filtermonth <- function() {                     
+#  selectInput(inputId = "Month", label = "Month:",
+ #             choices =c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),
+  #            multiple = TRUE
+  #)}
 
-filtertime <- function() {     
-  selectInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
-              choices = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23),
-              multiple = TRUE
-  )}
+#filtertime <- function() {     
+#  selectInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
+#              choices = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23),
+#              multiple = TRUE
+#  )}
 
 ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                 tabsetPanel(
@@ -46,16 +45,45 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                              leafletOutput(outputId = "mymap"),
                              #Execute colorSelect function to make UI selector
                              column(4,
-                                    colorSelect()
+                                    select_input(inputId = "color", 
+                                                 label = "Color the Data by:",
+                                                 choices = c("None", 
+                                                   "Severity", 
+                                                   "Temperature (F)", 
+                                                   "Precipitation", 
+                                                   "Visibility", 
+                                                   "Day/Night"),
+                                                 type = "select")
                              ),
                              #Execute filtering functions
                              column(4,
-                                    filtersunrise(),
-                                    filterweather()
+                                    select_input(inputId = "sunrise",
+                                                 label = "Day/Night:",
+                                                 choices = select_options(
+                                                   accidents,
+                                                   day.night,
+                                                   all = TRUE),
+                                                 type = "select"),
+                                    select_input(inputId = "weather",
+                                                 label = "Weather:",
+                                                 choices = select_options(
+                                                   accidents,
+                                                   wthr.cat),
+                                                 type = "multiple")
                              ),
                              column(4,
-                                    filtermonth(),
-                                    filtertime()
+                                    select_input(inputId = "month",
+                                                 label = "Month:",
+                                                 choices = select_options(
+                                                   accidents,
+                                                   month),
+                                                 type = "multiple"),
+                                    select_input(inputId = "hour",
+                                                 label = "Hour (24-hour system):",
+                                                 choices = select_options(
+                                                   accidents,
+                                                   hour),
+                                                 type = "multiple")
                              ),
                              submitButton("Apply Changes")
                            )
@@ -87,16 +115,16 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
 server <- function(input, output, session) {
   output$mymap <- renderLeaflet({
     if (input$sunrise != "All") {
-      us_accidents <- filter(us_accidents, us_accidents$day.night ==input$sunrise)
+      us_accidents <- filter(us_accidents, day.night == input$sunrise)
     }
     if (is.null(input$weather) == FALSE) {
-      us_accidents <- filter(us_accidents, us_accidents$Weather %in% input$weather)
+      us_accidents <- filter(us_accidents, wthr.cat %in% input$weather)
     }
-    if (is.null(input$Month) == FALSE) {
-      us_accidents <- filter(us_accidents, us_accidents$month %in% input$Month)
+    if (is.null(input$month) == FALSE) {
+      us_accidents <- filter(us_accidents, month %in% input$month)
     }
-    if (is.null(input$actualtime) == FALSE) {
-      us_accidents <- filter(us_accidents, us_accidents$hour %in% input$actualtime)
+    if (is.null(input$hour) == FALSE) {
+      us_accidents <- filter(us_accidents, hour %in% input$hour)
     }
     if (input$color == "None") {
       selectedColor <- "Black"
@@ -141,8 +169,8 @@ server <- function(input, output, session) {
     labels <- sprintf(
       "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
       "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
-      "Time of accident: ",us_accidents$time,
-      "Weather: ",us_accidents$wthr.cond
+      "Time of accident: ", us_accidents$time,
+      "Weather: ", us_accidents$wthr.cond
     ) %>% lapply(htmltools::HTML)
     
     leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
@@ -168,7 +196,7 @@ server <- function(input, output, session) {
                 opacity = 1)
   })
   output$plot <- renderPlot({
-    ggplot(us_accidents, aes_string(input$plotby)) +
+    ggplot(accidents, aes_string(input$plotby)) +
       geom_bar(width=1)
   })
 }
