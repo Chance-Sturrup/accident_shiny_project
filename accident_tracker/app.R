@@ -2,7 +2,6 @@ library(shiny)
 library(leaflet)
 library(tidyverse)
 library(accidenttracker)
-source("DataOrganize.R")
 #colorSelect Function
 #Creates UI selecter to choos how the data points on the map are colored 
 colorSelect <- function() {
@@ -11,7 +10,7 @@ colorSelect <- function() {
 }
 #Filtering function
 #Filter and reorganize the input options
-us_accidents <- DataOrganize(accidents)
+us_accidents <- na.omit(accidents)
 
 #Creates UI selecter to choose filtering options
 filtersunrise <- function() {
@@ -23,7 +22,7 @@ filtersunrise <- function() {
 filterweather <- function() {     
   selectInput(inputId = "weather", label = "Weather:",
               c(
-                sort(unique(as.character(us_accidents$Weather)))),
+                sort(unique(as.character(us_accidents$wthr.cat)))),
               multiple = TRUE
   )}
 filtermonth <- function() {                     
@@ -89,7 +88,7 @@ server <- function(input, output, session) {
       us_accidents <- filter(us_accidents, us_accidents$day.night ==input$sunrise)
     }
     if (is.null(input$weather) == FALSE) {
-      us_accidents <- filter(us_accidents, us_accidents$Weather %in% input$weather)
+      us_accidents <- filter(us_accidents, us_accidents$wthr.cat %in% input$weather)
     }
     if (is.null(input$Month) == FALSE) {
       us_accidents <- filter(us_accidents, us_accidents$month %in% input$Month)
