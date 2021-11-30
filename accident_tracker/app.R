@@ -99,12 +99,12 @@ server <- function(input, output, session) {
       legend = NULL
     }
     if (input$color == "Severity") {
-      colorPal <- colorBin("YlOrRd", domain = us_accidents$severity)
+      colorPal <- colorFactor("YlOrRd", domain = us_accidents$severity)
       colorData = us_accidents$severity
       legend = "Accident Severity"
     }
     if (input$color == "Temperature (F)") {
-      colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp)
+      colorPal <- colorNumeric("RdBu", reverse = TRUE, domain = us_accidents$temp)
       colorData = us_accidents$temp
       legend = "Temperature (F)"
     }
@@ -132,12 +132,12 @@ server <- function(input, output, session) {
       }
     })
     
-    labels <- sprintf(
-      "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
-      "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
-      "Time of accident: ", us_accidents$time,
-      "Weather: ", us_accidents$wthr.cond
-    ) %>% lapply(htmltools::HTML)
+#    labels <- sprintf(
+#      "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
+#      "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
+#      "Time of accident: ", us_accidents$time,
+#      "Weather: ", us_accidents$wthr.cond
+#    ) %>% lapply(htmltools::HTML)
     
     leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
@@ -148,12 +148,12 @@ server <- function(input, output, session) {
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
-                                                             spiderfyOnMaxZoom = FALSE),
-                       label =labels,
-                       labelOptions = labelOptions(style = list("font-weight" = "normal", 
-                                                                padding = "3px 8px"),
-                                                   textsize = "11px",
-                                                   direction = "auto")
+                                                             spiderfyOnMaxZoom = FALSE)#,
+                       #label =labels,
+                       #labelOptions = labelOptions(style = list("font-weight" = "normal", 
+                       #                                         padding = "3px 8px"),
+                       #                            textsize = "11px",
+                       #                            direction = "auto")
       ) %>%
       addLegend("bottomright", 
                 pal = colorPal, 
