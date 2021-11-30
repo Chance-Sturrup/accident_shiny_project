@@ -100,16 +100,18 @@ server <- function(input, output, session) {
     }
     if (input$color == "Severity") {
       colorPal <- colorFactor("YlOrRd", domain = us_accidents$severity)
-      colorData = us_accidents$severity
+      colorData <- us_accidents$severity
       legend = "Accident Severity"
     }
     if (input$color == "Temperature (F)") {
-      colorPal <- colorNumeric("RdBu", reverse = TRUE, domain = us_accidents$temp)
-      colorData = us_accidents$temp
+      colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, 
+                           bins = c(-50, 0, 32, 50, 80, 100, 175))
+      colorData <- us_accidents$temp
       legend = "Temperature (F)"
     }
     if (input$color == "Precipitation") {
-      colorPal <- colorBin("BrBG", domain = us_accidents$precip)
+      colorPal <- colorBin("BrBG", domain = us_accidents$precip,
+                           bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 25))
       colorData <- us_accidents$precip
       legend = "Precipitation"
     }
@@ -119,8 +121,9 @@ server <- function(input, output, session) {
       legend = "Day/Night"
     }
     if (input$color == "Visibility") {
-      colorPal <- colorBin("YlGnBu", domain = us_accidents$vis)
-      colorData = us_accidents$vis
+      colorPal <- colorBin("YlGnBu", domain = us_accidents$vis, 
+                           bins = c(0, 0.5, 2, 150))
+      colorData <- us_accidents$vis
       legend = "Visibility"
     }
     isolate({
