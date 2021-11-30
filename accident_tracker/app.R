@@ -10,7 +10,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                   tabPanel("Map", fluid = TRUE,
                            mainPanel(#this will create a space for us to display our map
                              leafletOutput(outputId = "mymap"),
-                             column(4,
+                             column(4, # Options to color data by different variables
                                     select_input(inputId = "color", 
                                                  label = "Color the Data by:",
                                                  choices = c("None", 
@@ -66,9 +66,18 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                           "State" = "state",
                           "Day/Night" = "day.night",
                           "Wind Direction" = "wind.dir",
-                          "Side of Road" = "side"
+                          "Side of Road" = "side",
+                          "Month" = "month",
+                          "Time" = "hour",
+                          "Precipitation" = "precip"
                           )
                       ),
+                      sliderInput("bins",
+                                  label = "Number of Bins (only for continuous variables):",
+                                  min = 5, 
+                                  max = 50, 
+                                  value = 20
+                                  ),
                       submitButton("Apply Changes")
                     )
                   )
@@ -162,13 +171,13 @@ server <- function(input, output, session) {
   })
   ##Adding this function to package
   histogram_plot <- function(x, y){
-    if(x == "state" | x == "day.night" | x == "wind.dir" | x == "side"){
+    if(x == "state" | x == "day.night" | x == "wind.dir" | x == "side" | x == "month" | x == "hour"){
       ggplot(us_accidents, aes_string(x)) +
         geom_bar(width=1)
     }
     else{
       ggplot(us_accidents, aes_string(x)) +
-        geom_histogram(binwidth=y)
+        geom_histogram(bins = y)
     }
   }
   
