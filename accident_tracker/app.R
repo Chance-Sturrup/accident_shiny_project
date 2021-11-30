@@ -14,11 +14,11 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                     select_input(inputId = "color", 
                                                  label = "Color the Data by:",
                                                  choices = c("None", 
-                                                   "Severity", 
-                                                   "Temperature (F)", 
-                                                   "Precipitation", 
-                                                   "Visibility", 
-                                                   "Day/Night"),
+                                                             "Severity", 
+                                                             "Temperature (F)", 
+                                                             "Precipitation", 
+                                                             "Visibility", 
+                                                             "Day/Night"),
                                                  type = "select")
                              ),
                              #Selecting filtering options
@@ -54,13 +54,10 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                              submitButton("Apply Changes")
                            )
                   ),
-                  tabPanel(
-                    "Plot",
-                    fluid = TRUE,
+                  tabPanel("Plot", fluid = TRUE,
                     mainPanel(
                       plotOutput(outputId = "plot"),
-                      selectInput(
-                        "plotby",
+                      selectInput("plotby",
                         label = "Plot By:",
                         c("Temperature" = "temp",
                           "Pressure" = "pressure",
@@ -70,7 +67,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                           "Day/Night" = "day.night",
                           "Wind Direction" = "wind.dir",
                           "Side of Road" = "side"
-                        )
+                          )
                       ),
                       submitButton("Apply Changes")
                     )
@@ -93,34 +90,33 @@ server <- function(input, output, session) {
       us_accidents <- filter(us_accidents, hour %in% input$hour)
     }
     if (input$color == "None") {
-      selectedColor <- "Black"
-      colorPal <- colorBin(selectedColor, domain = NULL)
-      colorData = NULL
+      color_pal <- colorBin("black", domain = NULL)
+      color_data = NULL
       legend = NULL
     }
     if (input$color == "Severity") {
-      colorPal <- colorBin("YlOrRd", domain = us_accidents$severity)
-      colorData = us_accidents$severity
+      color_pal <- colorBin("YlOrRd", domain = us_accidents$severity)
+      color_data = us_accidents$severity
       legend = "Accident Severity"
     }
     if (input$color == "Temperature (F)") {
-      colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp)
-      colorData = us_accidents$temp
+      color_pal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp)
+      color_data = us_accidents$temp
       legend = "Temperature (F)"
     }
     if (input$color == "Precipitation") {
-      colorPal <- colorBin("BrBG", domain = us_accidents$precip)
-      colorData <- us_accidents$precip
+      color_pal <- colorBin("BrBG", domain = us_accidents$precip)
+      color_data <- us_accidents$precip
       legend = "Precipitation"
     }
     if (input$color == "Day/Night") {
-      colorPal <- colorFactor("Dark2", domain = us_accidents$day.night)
-      colorData <- us_accidents$day.night
+      color_pal <- colorFactor("Dark2", domain = us_accidents$day.night)
+      color_data <- us_accidents$day.night
       legend = "Day/Night"
     }
     if (input$color == "Visibility") {
-      colorPal <- colorBin("YlGnBu", domain = us_accidents$vis)
-      colorData = us_accidents$vis
+      color_pal <- colorBin("YlGnBu", domain = us_accidents$vis)
+      color_data = us_accidents$vis
       legend = "Visibility"
     }
     isolate({
@@ -143,7 +139,7 @@ server <- function(input, output, session) {
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
       addTiles() %>%
       addCircleMarkers(data = us_accidents, lng = ~ lng, lat = ~ lat, radius = 5,
-                       color = ~ colorPal(colorData),
+                       color = ~ color_pal(color_data),
                        fillOpacity = 0.7,
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
@@ -156,14 +152,25 @@ server <- function(input, output, session) {
                                                    direction = "auto")
       ) %>%
       addLegend("bottomright", 
-                pal = colorPal, 
-                values = colorData,
+                pal = color_pal, 
+                values = color_data,
                 title = legend,
                 opacity = 1)
   })
+  ##Adding this function to package
+  histogram_plot <- function(x, y){
+    if(x == "state" | x == "day.night" | x == "wind.dir" | x == "side"){
+      ggplot(us_accidents, aes_string(x)) +
+        geom_bar(width=1)
+    }
+    else{
+      ggplot(us_accidents, aes_string(x)) +
+        geom_histogram(binwidth=y)
+    }
+  }
+  
   output$plot <- renderPlot({
-    ggplot(accidents, aes_string(input$plotby)) +
-      geom_bar(width=1)
+    histogram_plot(input$plotby, input$bins)
   })
 }
 
