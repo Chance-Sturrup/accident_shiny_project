@@ -95,18 +95,20 @@ server <- function(input, output, session) {
       legend = NULL
     }
     if (input$color == "Severity") {
-      color_pal <- colorBin("YlOrRd", domain = us_accidents$severity)
-      color_data = us_accidents$severity
+      colorPal <- colorFactor("YlOrRd", domain = us_accidents$severity)
+      colorData <- us_accidents$severity
       legend = "Accident Severity"
     }
     if (input$color == "Temperature (F)") {
-      color_pal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp)
-      color_data = us_accidents$temp
+      colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, 
+                           bins = c(-50, 0, 32, 50, 80, 100, 175))
+      colorData <- us_accidents$temp
       legend = "Temperature (F)"
     }
     if (input$color == "Precipitation") {
-      color_pal <- colorBin("BrBG", domain = us_accidents$precip)
-      color_data <- us_accidents$precip
+      colorPal <- colorBin("BrBG", domain = us_accidents$precip,
+                           bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 25))
+      colorData <- us_accidents$precip
       legend = "Precipitation"
     }
     if (input$color == "Day/Night") {
@@ -115,8 +117,9 @@ server <- function(input, output, session) {
       legend = "Day/Night"
     }
     if (input$color == "Visibility") {
-      color_pal <- colorBin("YlGnBu", domain = us_accidents$vis)
-      color_data = us_accidents$vis
+      colorPal <- colorBin("YlGnBu", domain = us_accidents$vis, 
+                           bins = c(0, 0.5, 2, 150))
+      colorData <- us_accidents$vis
       legend = "Visibility"
     }
     isolate({
@@ -128,12 +131,12 @@ server <- function(input, output, session) {
       }
     })
     
-    labels <- sprintf(
-      "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
-      "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
-      "Time of accident: ", us_accidents$time,
-      "Weather: ", us_accidents$wthr.cond
-    ) %>% lapply(htmltools::HTML)
+#    labels <- sprintf(
+#      "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
+#      "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
+#      "Time of accident: ", us_accidents$time,
+#      "Weather: ", us_accidents$wthr.cond
+#    ) %>% lapply(htmltools::HTML)
     
     leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
@@ -144,12 +147,12 @@ server <- function(input, output, session) {
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
-                                                             spiderfyOnMaxZoom = FALSE),
-                       label =labels,
-                       labelOptions = labelOptions(style = list("font-weight" = "normal", 
-                                                                padding = "3px 8px"),
-                                                   textsize = "11px",
-                                                   direction = "auto")
+                                                             spiderfyOnMaxZoom = FALSE)#,
+                       #label =labels,
+                       #labelOptions = labelOptions(style = list("font-weight" = "normal", 
+                       #                                         padding = "3px 8px"),
+                       #                            textsize = "11px",
+                       #                            direction = "auto")
       ) %>%
       addLegend("bottomright", 
                 pal = color_pal, 
