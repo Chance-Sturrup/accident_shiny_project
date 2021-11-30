@@ -4,46 +4,12 @@ library(tidyverse)
 library(accidenttracker)
 
 us_accidents <- accidents
-#colorSelect Function
-#Creates UI selecter to choos how the data points on the map are colored 
-#colorSelect <- function() {
-#  selectInput("color", label = "Color the Data by:",
-#              c("None", "Severity", "Temperature (F)", "Precipitation", "Visibility", "Day/Night"))
-#}
-
-
-#Creates UI selecter to choose filtering options
-# Rename to select_columnname
-#filtersunrise <- function() {
-#  selectInput(inputId = "sunrise", label = "Sunrise/Sunset:",
-#              c("All",
-#                sort(unique(as.character(us_accidents$day.night)))
-#              )
-#  )}
-#filterweather <- function() {     
-#  selectInput(inputId = "weather", label = "Weather:",
-#              c(
-#                sort(unique(as.character(us_accidents$Weather)))),
-#              multiple = TRUE
-#  )}
-#filtermonth <- function() {                     
-#  selectInput(inputId = "Month", label = "Month:",
- #             choices =c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),
-  #            multiple = TRUE
-  #)}
-
-#filtertime <- function() {     
-#  selectInput(inputId = "actualtime", label = "Actual time (24 hours systems):",
-#              choices = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23),
-#              multiple = TRUE
-#  )}
 
 ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                 tabsetPanel(
                   tabPanel("Map", fluid = TRUE,
                            mainPanel(#this will create a space for us to display our map
                              leafletOutput(outputId = "mymap"),
-                             #Execute colorSelect function to make UI selector
                              column(4,
                                     select_input(inputId = "color", 
                                                  label = "Color the Data by:",
@@ -55,7 +21,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                                    "Day/Night"),
                                                  type = "select")
                              ),
-                             #Execute filtering functions
+                             #Selecting filtering options
                              column(4,
                                     select_input(inputId = "sunrise",
                                                  label = "Day/Night:",
