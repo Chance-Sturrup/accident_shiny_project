@@ -51,13 +51,20 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                                    hour),
                                                  type = "multiple")
                              ),
-                             submitButton("Apply Changes")
+                            # submitButton("Apply Changes")
+                            # Need to convert submitButton to actionButton
                            )
                   ),
                   tabPanel("Plot", fluid = TRUE,
                     mainPanel(
                       plotOutput(outputId = "plot"),
-                      selectInput("plotby",
+                      radioButtons("plottype",
+                                   label = "Explore:",
+                                   c("Overall Distribution" = "dist",
+                                     "Effect on Severity" = "severity")),
+                      conditionalPanel(
+                        condition = "input.plottype == 'dist'",
+                        selectInput("plotby",
                         label = "Plot By:",
                         c("Temperature" = "temp",
                           "Pressure" = "pressure",
@@ -71,14 +78,37 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                           "Time" = "hour",
                           "Precipitation" = "precip"
                           )
-                      ),
-                      sliderInput("bins",
-                                  label = "Number of Bins (only for continuous variables):",
+                        ),
+                        conditionalPanel(
+                          condition = "input.plotby == 'temp' || input.plotby == 'pressure' || input.plotby == 'vis' || input.plotby == 'wind.spd' || input.plotby == 'precip'",
+                          sliderInput("bins",
+                                  label = "Number of Bins:",
                                   min = 5, 
                                   max = 50, 
                                   value = 20
-                                  ),
-                      submitButton("Apply Changes")
+                                  )
+                        )
+                      ),
+                      conditionalPanel(
+                        condition = "input.plottype == 'severity'",
+                        radioButtons("analysis",
+                                     label = "Plot Severity As:",
+                                     c("Individual Points" = "all",
+                                       "Average" = "avg")
+                        ),
+                        selectInput("x",
+                                    label = "Plot Severity vs.:",
+                                    c("Precipitation" = "precip",
+                                      "Visibility" = "vis",
+                                      "Temperature" = "temp",
+                                      "Day/Night" = "day.night",
+                                      "Month" = "month",
+                                      "Time" = "hour",
+                                      "State" = "state",
+                                      "Weather" = "wthr.cat",
+                                      "Pressure" = "pressure")
+                                    )
+                      )
                     )
                   )
                 )
