@@ -116,7 +116,7 @@ server <- function(input, output, session) {
     }
     if (input$color == "Precipitation") {
       colorPal <- colorBin("BrBG", domain = us_accidents$precip,
-                           bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 25))
+                           bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 2))
       colorData <- us_accidents$precip
       legend = "Precipitation"
     }
