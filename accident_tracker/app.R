@@ -84,8 +84,40 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                 )
 )
 
+color_pal <- function(a){
+  switch(a,
+         "None" =  colorBin("black", domain = NULL),
+         "Severity" = colorFactor("YlOrRd", domain = us_accidents$severity),
+         "Temperature (F)" = colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, bins = c(-50, 0, 32, 50, 80, 100, 175)),
+         "Precipitation" = colorBin("BrBG", domain = us_accidents$precip, bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 25)),
+         "Day/Night" = colorFactor("Dark2", domain = us_accidents$day.night),
+         "Visibility" = colorBin("YlGnBu", domain = us_accidents$vis, bins = c(0, 0.5, 2, 150))
+  )
+}
+
+color_data <- function(b){
+  switch(b,
+         "None" = us_accidents$severity,
+         "Severity" = us_accidents$severity,
+         "Temperature (F)" = us_accidents$temp,
+         "Precipitation" = us_accidents$precip,
+         "Day/Night" = us_accidents$day.night,
+         "Visibility" = us_accidents$vis,
+  )
+}
+
+legend_title <- function(c){
+  switch(c,
+         "None" = "None",
+         "Severity" = "Accident Severity",
+         "Temperature (F)" = "Temperature (F)",
+         "Precipitation" = "Precipitation",
+         "Day/Night" = "Day/Night",
+         "Visibility" = "Visibility",
+  )}
+
 server <- function(input, output, session) {
-  output$mymap <- renderLeaflet({
+  observe({
     if (input$sunrise != "All") {
       us_accidents <- filter(us_accidents, day.night == input$sunrise)
     }
@@ -98,77 +130,58 @@ server <- function(input, output, session) {
     if (is.null(input$hour) == FALSE) {
       us_accidents <- filter(us_accidents, hour %in% input$hour)
     }
-    if (input$color == "None") {
-      color_pal <- colorBin("black", domain = NULL)
-      color_data = NULL
-      legend = NULL
+  })
+  
+  isolate({
+    if ("mymap_center" %in% names(input)) {
+      mapparams <- list(center = input$mymap_center,
+                        zoom = input$mymap_zoom)
+    } else {
+      mapparams <- list(center = list(lng=-86.5804, lat=35.5175), zoom = 7)
     }
-    if (input$color == "Severity") {
-      colorPal <- colorFactor("YlOrRd", domain = us_accidents$severity)
-      colorData <- us_accidents$severity
-      legend = "Accident Severity"
-    }
-    if (input$color == "Temperature (F)") {
-      colorPal <- colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, 
-                           bins = c(-50, 0, 32, 50, 80, 100, 175))
-      colorData <- us_accidents$temp
-      legend = "Temperature (F)"
-    }
-    if (input$color == "Precipitation") {
-      colorPal <- colorBin("BrBG", domain = us_accidents$precip,
-                           bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 2))
-      colorData <- us_accidents$precip
-      legend = "Precipitation"
-    }
-    if (input$color == "Day/Night") {
-      color_pal <- colorFactor("Dark2", domain = us_accidents$day.night)
-      color_data <- us_accidents$day.night
-      legend = "Day/Night"
-    }
-    if (input$color == "Visibility") {
-      colorPal <- colorBin("YlGnBu", domain = us_accidents$vis, 
-                           bins = c(0, 0.5, 2, 150))
-      colorData <- us_accidents$vis
-      legend = "Visibility"
-    }
-    isolate({
-      if ("mymap_center" %in% names(input)) {
-        mapparams <- list(center = input$mymap_center,
-                          zoom = input$mymap_zoom)
-      } else {
-        mapparams <- list(center = list(lng=-86.5804, lat=35.5175), zoom = 7)
-      }
-    })
-    
-#    labels <- sprintf(
-#      "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
-#      "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
-#      "Time of accident: ", us_accidents$time,
-#      "Weather: ", us_accidents$wthr.cond
-#    ) %>% lapply(htmltools::HTML)
-    
+  })
+  
+  output$mymap <- renderLeaflet({
     leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
-      addTiles() %>%
-      addCircleMarkers(data = us_accidents, lng = ~ lng, lat = ~ lat, radius = 5,
-                       color = ~ color_pal(color_data),
+      addTiles()
+  })
+  
+  # labels <- sprintf(
+  #   "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
+  #   "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
+  #   "Time of accident: ", us_accidents$time,
+  #   "Weather: ", us_accidents$wthr.cond
+  # ) %>% lapply(htmltools::HTML)
+  
+  observe({
+    leafletProxy("mymap", data = us_accidents) %>%
+      clearShapes() %>%
+      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
+                       color = color_pal(input$color)(color_data(input$color)),
                        fillOpacity = 0.7,
                        clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
-                                                             spiderfyOnMaxZoom = FALSE)#,
-                       #label =labels,
-                       #labelOptions = labelOptions(style = list("font-weight" = "normal", 
-                       #                                         padding = "3px 8px"),
-                       #                            textsize = "11px",
-                       #                            direction = "auto")
-      ) %>%
-      addLegend("bottomright", 
-                pal = color_pal, 
-                values = color_data,
-                title = legend,
+                                                             spiderfyOnMaxZoom = FALSE),
+                       # label =labels,
+                       # labelOptions = labelOptions(style = list("font-weight" = "normal",
+                       #                                          padding = "3px 8px"),
+                       #                             textsize = "11px",
+                       #                             direction = "auto")
+      )
+  })
+  
+  observe({
+    leafletProxy("mymap", data = us_accidents) %>%
+      clearControls() %>%
+      addLegend("bottomright",
+                pal = color_pal(input$color),
+                values = color_data(input$color),
+                title = legend_title(input$color),
                 opacity = 1)
   })
+  
   ##Adding this function to package
   histogram_plot <- function(x, y){
     if(x == "state" | x == "day.night" | x == "wind.dir" | x == "side" | x == "month" | x == "hour"){
