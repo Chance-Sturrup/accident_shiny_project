@@ -51,8 +51,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                                    hour),
                                                  type = "multiple")
                              ),
-                            # submitButton("Apply Changes")
-                            # Need to convert submitButton to actionButton
+                             actionButton("update", "Apply Changes")
                            )
                   ),
                   tabPanel("Plot", fluid = TRUE,
@@ -107,7 +106,16 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                       "State" = "state",
                                       "Weather" = "wthr.cat",
                                       "Pressure" = "pressure")
-                                    )
+                                    ),
+                       conditionalPanel(
+                         condition = "input.x == 'temp' || input.x == 'pressure' || input.x == 'vis' || input.x == 'precip'",
+                         sliderInput("y",
+                                     label = "Number of Bins:",
+                                     min = 5, 
+                                     max = 100, 
+                                     value = 30
+                         )
+                       )
                       )
                     )
                   )
@@ -116,6 +124,8 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
 
 server <- function(input, output, session) {
   output$mymap <- renderLeaflet({
+    input$update
+    
     if (input$sunrise != "All") {
       us_accidents <- filter(us_accidents, day.night == input$sunrise)
     }
@@ -218,10 +228,13 @@ server <- function(input, output, session) {
         ggplot(accidents_by_sev(), aes(.data[[var]], avg.sev)) +
           plot_geom() 
       } else {
-        ggplot(accidents, aes(.data[[var]], color = as.factor(severity))) +
+        ggplot(accidents_vis, aes(.data[[var]], y = ..density..)) +
           plot_geom()
       }
   }
+  
+  accidents_vis <- accidents %>%
+    mutate(vis = replace(vis, vis > 10, 10))
   
   display_plot <- reactive({
     switch(input$plottype,
@@ -236,7 +249,7 @@ server <- function(input, output, session) {
              month = geom_col(),
              state = geom_col(),
              wthr.cat = geom_col(),
-             geom_freqpoly()
+             geom_freqpoly(aes(color = as.factor(severity)), bins = input$y)
       )
     # if (input$analysis == "all") {
     #   plot_geom <- switch(input$x,
