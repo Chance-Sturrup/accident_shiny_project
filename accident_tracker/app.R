@@ -48,15 +48,7 @@ filter_if <- function(condition, success) {
   }
 }
 
-plot_by_sev <- function(var) {
-  if (var == "day.night" | var == "month" | var == "state" | var == "wthr.cat" | var == "hour") {
-    ggplot(accidents_by_sev(), aes(.data[[var]], avg.sev)) +
-      plot_geom() 
-  } else {
-    ggplot(accidents_vis, aes(.data[[var]], y = ..density..)) +
-      plot_geom()
-  }
-}
+
 ##########################################################################################
 
 ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
@@ -118,10 +110,12 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                   tabPanel("Plot", fluid = TRUE,
                     mainPanel(
                       plotOutput(outputId = "plot"),
+                      # Allow the user to select type of plot
                       radioButtons("plottype",
                                    label = "Explore:",
                                    c("Overall Distribution" = "dist",
                                      "Effect on Severity" = "severity")),
+                      # A panel that appears when user chooses to plot distribution
                       conditionalPanel(
                         condition = "input.plottype == 'dist'",
                         # Allow the user to choose which data is plotted
@@ -140,6 +134,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                           "Precipitation" = "precip"
                           )
                         ),
+                        # A bin selector that only appears for continuous data
                         conditionalPanel(
                           condition = "input.plotby == 'temp' || input.plotby == 'pressure' || input.plotby == 'vis' || input.plotby == 'wind.spd' || input.plotby == 'precip'",
                           # Allow the user to change the number of bins
@@ -151,13 +146,10 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                   )
                         )
                       ),
+                      # A panel that appears when user chooses to plot by severity
                       conditionalPanel(
                         condition = "input.plottype == 'severity'",
-                       # radioButtons("analysis",
-                       #              label = "Plot Severity As:",
-                       #              c("Individual Points" = "all",
-                        #               "Average" = "avg")
-                       # ),
+                        # Allow the user to choose which data is plotted
                         selectInput("x",
                                     label = "Plot Severity vs.:",
                                     c("Precipitation" = "precip",
@@ -170,8 +162,10 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                       "Weather" = "wthr.cat",
                                       "Pressure" = "pressure")
                                     ),
+                       # A bin selector that only appears for continuous data
                        conditionalPanel(
                          condition = "input.x == 'temp' || input.x == 'pressure' || input.x == 'vis' || input.x == 'precip'",
+                         # Allow the user to change the number of bins
                          sliderInput("y",
                                      label = "Number of Bins:",
                                      min = 5, 
@@ -255,33 +249,32 @@ server <- function(input, output, session) {
   }) %>%
     bindEvent(input$update)
   
-  
-  display_plot <- reactive({
-    switch(input$plottype,
-           dist = histogram_plot(input$plotby, input$bins),
-           severity = plot_by_sev(input$x)
-           )
-  })
-  
-  plot_geom <- reactive({
-      switch(input$x,
-             day.night = geom_col(),
-             month = geom_col(),
-             state = geom_col(),
-             wthr.cat = geom_col(),
-             hour = geom_col(),
-             geom_freqpoly(aes(color = as.factor(severity)), bins = input$y)
-      )
-  })
-  
+ #################################################################################
+  # Summarise data based on UI input
   accidents_by_sev <- reactive({
     accidents %>%
-       group_by(.data[[input$x]]) %>%
-       summarise(avg.sev = mean(severity))
+      group_by(.data[[input$x]]) %>%
+      summarise(avg.sev = mean(severity))
   })
   
+  # Choose geom and details of plot based on UI input
+  plot_by_sev <- reactive({
+    if (input$x == "day.night" | input$x == "month" | input$x == "state" | input$x == "wthr.cat" | input$x == "hour") {
+      ggplot(accidents_by_sev(), aes(.data[[input$x]], avg.sev)) +
+        geom_col() 
+    } else {
+      ggplot(accidents_vis, aes(.data[[input$x]], y = ..density..)) +
+        geom_freqpoly(aes(color = as.factor(severity)), bins = input$y)
+    }
+  })
+  
+##################################################################################
+  # Plot the graph
   output$plot <- renderPlot({
-    display_plot()
+    switch(input$plottype,
+           dist = histogram_plot(input$plotby, input$bins),
+           severity = plot_by_sev()
+    )
   })
 }
 
