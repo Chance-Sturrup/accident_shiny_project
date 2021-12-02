@@ -91,11 +91,11 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                       ),
                       conditionalPanel(
                         condition = "input.plottype == 'severity'",
-                        radioButtons("analysis",
-                                     label = "Plot Severity As:",
-                                     c("Individual Points" = "all",
-                                       "Average" = "avg")
-                        ),
+                       # radioButtons("analysis",
+                       #              label = "Plot Severity As:",
+                       #              c("Individual Points" = "all",
+                        #               "Average" = "avg")
+                       # ),
                         selectInput("x",
                                     label = "Plot Severity vs.:",
                                     c("Precipitation" = "precip",
@@ -199,20 +199,64 @@ server <- function(input, output, session) {
                 title = legend,
                 opacity = 1)
   })
+  
   ##Adding this function to package
   histogram_plot <- function(x, y){
     if(x == "state" | x == "day.night" | x == "wind.dir" | x == "side" | x == "month" | x == "hour"){
-      ggplot(us_accidents, aes_string(x)) +
+      ggplot(accidents, aes_string(x)) +
         geom_bar(width=1)
     }
     else{
-      ggplot(us_accidents, aes_string(x)) +
+      ggplot(accidents, aes_string(x)) +
         geom_histogram(bins = y)
     }
   }
   
+  ##Add to package
+  plot_by_sev <- function(var) {
+      if (var == "day.night" | var == "month" | var == "state" | var == "wthr.cat") {
+        ggplot(accidents_by_sev(), aes(.data[[var]], avg.sev)) +
+          plot_geom() 
+      } else {
+        ggplot(accidents, aes(.data[[var]], color = as.factor(severity))) +
+          plot_geom()
+      }
+  }
+  
+  display_plot <- reactive({
+    switch(input$plottype,
+           dist = histogram_plot(input$plotby, input$bins),
+           severity = plot_by_sev(input$x)
+           )
+  })
+  
+  plot_geom <- reactive({
+      switch(input$x,
+             day.night = geom_col(),
+             month = geom_col(),
+             state = geom_col(),
+             wthr.cat = geom_col(),
+             geom_freqpoly()
+      )
+    # if (input$analysis == "all") {
+    #   plot_geom <- switch(input$x,
+    #                      day.night = geom_count(),
+    #                     month = geom_count(),
+    #                     state = geom_count(),
+    #                     wthr.cat = geom_count(),
+    #                    geom_dotplot()
+    # )
+    # }
+  })
+  
+  accidents_by_sev <- reactive({
+    accidents %>%
+      group_by(.data[[input$x]]) %>%
+      summarise(avg.sev = mean(severity))
+  })
+  
   output$plot <- renderPlot({
-    histogram_plot(input$plotby, input$bins)
+    display_plot()
   })
 }
 
