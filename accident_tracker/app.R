@@ -3,14 +3,69 @@ library(leaflet)
 library(tidyverse)
 library(accidenttracker)
 
+##########################################################################################
+# Shiny app that plots US car accidents from 2019 on a map. 
+# User is able to color and filter the data
+# Also contains an option to plot the accident data as a histogram
+# Data obtained from Kaggle, https://www.kaggle.com/sobhanmoosavi/us-accidents
+##########################################################################################
+
+# Load the data frame
 us_accidents <- accidents
+
+# Limit max visibility to 10 miles to make distribution easier to visualize
+accidents_vis <- accidents %>%
+  mutate(vis = replace(vis, vis > 10, 10))
+
+##########################################################################################
+# Functions that Need to Be included in Package and Removed From App
+
+color_pal <- function(a){
+  switch(a,
+         "None" =  colorBin("black", domain = NULL),
+         "Severity" = colorFactor("YlOrRd", domain = us_accidents$severity),
+         "Temperature (F)" = colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, bins = c(-50, 0, 32, 50, 80, 100, 175)),
+         "Precipitation" = colorBin("BrBG", domain = us_accidents$precip, bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 2.0)),
+         "Day/Night" = colorFactor("Dark2", domain = us_accidents$day.night),
+         "Visibility" = colorBin("YlGnBu", domain = us_accidents$vis, bins = c(0, 0.5, 2, 150))
+  )}
+
+legend_title <- function(c){
+  switch(c,
+         "None" = "None",
+         "Severity" = "Accident Severity",
+         "Temperature (F)" = "Temperature (F)",
+         "Precipitation" = "Precipitation",
+         "Day/Night" = "Day/Night",
+         "Visibility" = "Visibility",
+  )}
+
+filter_if <- function(condition, success) {
+  if (condition) {
+    success
+  } else {
+    TRUE
+  }
+}
+
+plot_by_sev <- function(var) {
+  if (var == "day.night" | var == "month" | var == "state" | var == "wthr.cat" | var == "hour") {
+    ggplot(accidents_by_sev(), aes(.data[[var]], avg.sev)) +
+      plot_geom() 
+  } else {
+    ggplot(accidents_vis, aes(.data[[var]], y = ..density..)) +
+      plot_geom()
+  }
+}
+##########################################################################################
 
 ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                 tabsetPanel(
+                  # Tab containing a map showing where accidents occurred
                   tabPanel("Map", fluid = TRUE,
-                           mainPanel(#this will create a space for us to display our map
-                             leafletOutput(outputId = "mymap"),
-                             column(4, # Options to color data by different variables
+                           mainPanel(leafletOutput(outputId = "mymap"),
+                            # Allow the user to select a variable to color the data by
+                             column(4,
                                     select_input(inputId = "color", 
                                                  label = "Color the Data by:",
                                                  choices = c("None", 
@@ -21,7 +76,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                                              "Day/Night"),
                                                  type = "select")
                              ),
-                             #Selecting filtering options
+                            # Allow the user to filter the data
                              column(4,
                                     select_input(inputId = "sunrise",
                                                  label = "Day/Night:",
@@ -52,8 +107,14 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                                  type = "multiple")
                              ),
                              actionButton("update", "Plot Map")
+                            # Limits updating map to only after button is clicked,
+                            # reducing load time while selecting options
                            )
                   ),
+                  
+##########################################################################################                  
+                  # Tab containing a plot of the data  
+
                   tabPanel("Plot", fluid = TRUE,
                     mainPanel(
                       plotOutput(outputId = "plot"),
@@ -63,6 +124,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                      "Effect on Severity" = "severity")),
                       conditionalPanel(
                         condition = "input.plottype == 'dist'",
+                        # Allow the user to choose which data is plotted
                         selectInput("plotby",
                         label = "Plot By:",
                         c("Temperature" = "temp",
@@ -80,6 +142,7 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                         ),
                         conditionalPanel(
                           condition = "input.plotby == 'temp' || input.plotby == 'pressure' || input.plotby == 'vis' || input.plotby == 'wind.spd' || input.plotby == 'precip'",
+                          # Allow the user to change the number of bins
                           sliderInput("bins",
                                   label = "Number of Bins:",
                                   min = 5, 
@@ -122,57 +185,18 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                 )
 )
 
-color_pal <- function(a){
-  switch(a,
-         "None" =  colorBin("black", domain = NULL),
-         "Severity" = colorFactor("YlOrRd", domain = us_accidents$severity),
-         "Temperature (F)" = colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, bins = c(-50, 0, 32, 50, 80, 100, 175)),
-         "Precipitation" = colorBin("BrBG", domain = us_accidents$precip, bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 2.0)),
-         "Day/Night" = colorFactor("Dark2", domain = us_accidents$day.night),
-         "Visibility" = colorBin("YlGnBu", domain = us_accidents$vis, bins = c(0, 0.5, 2, 150))
-  )
-}
-
-# color_data <- function(b){
-#   switch(b,
-#          "None" = us_accidents$severity,
-#          "Severity" = us_accidents$severity,
-#          "Temperature (F)" = us_accidents$temp,
-#          "Precipitation" = us_accidents$precip,
-#          "Day/Night" = us_accidents$day.night,
-#          "Visibility" = us_accidents$vis,
-#   )
-# }
-
-legend_title <- function(c){
-  switch(c,
-         "None" = "None",
-         "Severity" = "Accident Severity",
-         "Temperature (F)" = "Temperature (F)",
-         "Precipitation" = "Precipitation",
-         "Day/Night" = "Day/Night",
-         "Visibility" = "Visibility",
-  )}
-
+##########################################################################################                  
 server <- function(input, output, session) {
+
   isolate({
     if ("mymap_center" %in% names(input)) {
-      mapparams <- list(center = input$mymap_center,
-                        zoom = input$mymap_zoom)
+      mapparams <- list(center = input$mymap_center, zoom = input$mymap_zoom)
     } else {
       mapparams <- list(center = list(lng=-86.5804, lat=35.5175), zoom = 7)
     }
-  })
+    })
   
- ## Add to package 
-  filter_if <- function(condition, success) {
-    if (condition) {
-      success
-    } else {
-      TRUE
-    }
-  }
-  
+  #Filter the dataframe according to UI input
   df <- reactive ({
     us_accidents %>%
       filter(filter_if(is.null(input$weather) == FALSE, wthr.cat %in% input$weather),
@@ -183,6 +207,7 @@ server <- function(input, output, session) {
   }) %>%
     bindEvent(input$update)
   
+  # Change how the map markers are colored according to UI input
   color_data <- reactive({
     switch(input$color,
            "None" = df()$severity,
@@ -195,6 +220,8 @@ server <- function(input, output, session) {
   }) %>%
     bindEvent(input$update)
   
+##########################################################################################                  
+  #Plot the map
   output$mymap <- renderLeaflet({
     leaflet(data = df(),
             options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
@@ -202,68 +229,32 @@ server <- function(input, output, session) {
       addTiles()
   })
   
-  # labels <- sprintf(
-  #   "<strong>%s</strong>%s%s%s%s%s<br/><strong>%s</strong>%s<br/><strong>%s</strong>%s",
-  #   "Place of accident: ", us_accidents$city," ", us_accidents$state,", ", us_accidents$zip,
-  #   "Time of accident: ", us_accidents$time,
-  #   "Weather: ", us_accidents$wthr.cond
-  # ) %>% lapply(htmltools::HTML)
+  # Add markers to the map
+  observe({
+    leafletProxy("mymap", data = df()) %>%
+      clearMarkerClusters() %>%
+      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
+                       color = color_pal(input$color)(color_data()),
+                       fillOpacity = 0.7,
+                       # Cluster datapoints to reduce load time
+                       # shows all individual data points at zoom level 14
+                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
+                                                             spiderfyOnMaxZoom = FALSE))
+    }) %>%
+    bindEvent(input$update)
   
- observe({
-   leafletProxy("mymap", data = df()) %>%
-     clearMarkerClusters() %>%
-     addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
-                      color = color_pal(input$color)(color_data()),
-                      fillOpacity = 0.7,
-                      clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
-                                                             # shows all individual data points
-                                                             # at zoom level 14
-                                                            spiderfyOnMaxZoom = FALSE) #,
-# label =labels,
-# labelOptions = labelOptions(style = list("font-weight" = "normal",
-#                                          padding = "3px 8px"),
-#                             textsize = "11px",
-#                             direction = "auto")
-     )
- }) %>%
-   bindEvent(input$update)
-
- observe({
-   leafletProxy("mymap", data = df()) %>%
-     clearControls() %>%
-     addLegend("bottomright",
-               pal = color_pal(input$color),
-               values = color_data(),
-               title = legend_title(input$color),
-               opacity = 1)
- }) %>%
-   bindEvent(input$update)
+  # Add legend to the map
+  observe({
+    leafletProxy("mymap", data = df()) %>%
+      clearControls() %>%
+      addLegend("bottomright",
+                pal = color_pal(input$color),
+                values = color_data(),
+                title = legend_title(input$color),
+                opacity = 1)
+  }) %>%
+    bindEvent(input$update)
   
-  ##Adding this function to package
-  histogram_plot <- function(x, y){
-    if(x == "state" | x == "day.night" | x == "wind.dir" | x == "side" | x == "month" | x == "hour"){
-      ggplot(accidents, aes_string(x)) +
-        geom_bar(width=1)
-    }
-    else{
-      ggplot(accidents, aes_string(x)) +
-        geom_histogram(bins = y)
-    }
-  }
-  
-  ##Add to package
-  plot_by_sev <- function(var) {
-      if (var == "day.night" | var == "month" | var == "state" | var == "wthr.cat" | var == "hour") {
-        ggplot(accidents_by_sev(), aes(.data[[var]], avg.sev)) +
-          plot_geom() 
-      } else {
-        ggplot(accidents_vis, aes(.data[[var]], y = ..density..)) +
-          plot_geom()
-      }
-  }
-  
-  accidents_vis <- accidents %>%
-    mutate(vis = replace(vis, vis > 10, 10))
   
   display_plot <- reactive({
     switch(input$plottype,
@@ -281,15 +272,6 @@ server <- function(input, output, session) {
              hour = geom_col(),
              geom_freqpoly(aes(color = as.factor(severity)), bins = input$y)
       )
-    # if (input$analysis == "all") {
-    #   plot_geom <- switch(input$x,
-    #                      day.night = geom_count(),
-    #                     month = geom_count(),
-    #                     state = geom_count(),
-    #                     wthr.cat = geom_count(),
-    #                    geom_dotplot()
-    # )
-    # }
   })
   
   accidents_by_sev <- reactive({
@@ -303,4 +285,5 @@ server <- function(input, output, session) {
   })
 }
 
+# Run the app
 shinyApp(ui, server)
