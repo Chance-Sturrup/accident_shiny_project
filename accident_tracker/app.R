@@ -117,7 +117,18 @@ legend_title <- function(c){
   )}
 
 server <- function(input, output, session) {
-  observe({
+  
+  
+  isolate({
+    if ("mymap_center" %in% names(input)) {
+      mapparams <- list(center = input$mymap_center,
+                        zoom = input$mymap_zoom)
+    } else {
+      mapparams <- list(center = list(lng=-86.5804, lat=35.5175), zoom = 7)
+    }
+  })
+  
+  output$mymap <- renderLeaflet({
     if (input$sunrise != "All") {
       us_accidents <- filter(us_accidents, day.night == input$sunrise)
     }
@@ -130,21 +141,24 @@ server <- function(input, output, session) {
     if (is.null(input$hour) == FALSE) {
       us_accidents <- filter(us_accidents, hour %in% input$hour)
     }
-  })
-  
-  isolate({
-    if ("mymap_center" %in% names(input)) {
-      mapparams <- list(center = input$mymap_center,
-                        zoom = input$mymap_zoom)
-    } else {
-      mapparams <- list(center = list(lng=-86.5804, lat=35.5175), zoom = 7)
-    }
-  })
-  
-  output$mymap <- renderLeaflet({
-    leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
+    
+    leaflet(data = us_accidents,
+            options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
-      addTiles()
+      addTiles() %>%
+      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
+                       color = color_pal(input$color)(color_data(input$color)),
+                       fillOpacity = 0.7,
+                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
+                                                             # shows all individual data points
+                                                             # at zoom level 14
+                                                             spiderfyOnMaxZoom = FALSE)
+      ) %>%
+      addLegend("bottomright",
+                pal = color_pal(input$color),
+                values = color_data(input$color),
+                title = legend_title(input$color),
+                opacity = 1)
   })
   
   # labels <- sprintf(
@@ -154,33 +168,33 @@ server <- function(input, output, session) {
   #   "Weather: ", us_accidents$wthr.cond
   # ) %>% lapply(htmltools::HTML)
   
-  observe({
-    leafletProxy("mymap", data = us_accidents) %>%
-      clearShapes() %>%
-      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
-                       color = color_pal(input$color)(color_data(input$color)),
-                       fillOpacity = 0.7,
-                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
+#  observe({
+#    leafletProxy("mymap", data = us_accidents) %>%
+#      clearShapes() %>%
+#      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
+#                       color = color_pal(input$color)(color_data(input$color)),
+#                       fillOpacity = 0.7,
+#                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
-                                                             spiderfyOnMaxZoom = FALSE),
+#                                                             spiderfyOnMaxZoom = FALSE),
                        # label =labels,
                        # labelOptions = labelOptions(style = list("font-weight" = "normal",
                        #                                          padding = "3px 8px"),
                        #                             textsize = "11px",
                        #                             direction = "auto")
-      )
-  })
+#      )
+#  })
   
-  observe({
-    leafletProxy("mymap", data = us_accidents) %>%
-      clearControls() %>%
-      addLegend("bottomright",
-                pal = color_pal(input$color),
-                values = color_data(input$color),
-                title = legend_title(input$color),
-                opacity = 1)
-  })
+#  observe({
+#    leafletProxy("mymap", data = us_accidents) %>%
+#      clearControls() %>%
+#      addLegend("bottomright",
+#                pal = color_pal(input$color),
+#                values = color_data(input$color),
+#                title = legend_title(input$color),
+#                opacity = 1)
+#  })
   
   ##Adding this function to package
   histogram_plot <- function(x, y){
