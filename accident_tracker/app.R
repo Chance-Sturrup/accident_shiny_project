@@ -95,16 +95,16 @@ color_pal <- function(a){
   )
 }
 
-color_data <- function(b){
-  switch(b,
-         "None" = us_accidents$severity,
-         "Severity" = us_accidents$severity,
-         "Temperature (F)" = us_accidents$temp,
-         "Precipitation" = us_accidents$precip,
-         "Day/Night" = us_accidents$day.night,
-         "Visibility" = us_accidents$vis,
-  )
-}
+# color_data <- function(b){
+#   switch(b,
+#          "None" = us_accidents$severity,
+#          "Severity" = us_accidents$severity,
+#          "Temperature (F)" = us_accidents$temp,
+#          "Precipitation" = us_accidents$precip,
+#          "Day/Night" = us_accidents$day.night,
+#          "Visibility" = us_accidents$vis,
+#   )
+# }
 
 legend_title <- function(c){
   switch(c,
@@ -146,7 +146,16 @@ server <- function(input, output, session) {
       )
   })
   
-  
+  color_data <- reactive({
+    switch(input$color,
+           "None" = df()$severity,
+           "Severity" = df()$severity,
+           "Temperature (F)" = df()$temp,
+           "Precipitation" = df()$precip,
+           "Day/Night" = df()$day.night,
+           "Visibility" = df()$vis,
+    )
+  })
   
   output$mymap <- renderLeaflet({
     pal <- color_pal(input$color)
@@ -181,7 +190,7 @@ server <- function(input, output, session) {
    leafletProxy("mymap", data = df()) %>%
      clearShapes() %>%
      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
-                      color = color_pal(input$color)(color_data(input$color)),
+                      color = color_pal(input$color)(color_data()),
                       fillOpacity = 0.7,
                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
  #                                                            # shows all individual data points
@@ -200,7 +209,7 @@ server <- function(input, output, session) {
      clearControls() %>%
      addLegend("bottomright",
                pal = color_pal(input$color),
-               values = color_data(input$color),
+               values = color_data(),
                title = legend_title(input$color),
                opacity = 1)
  })
