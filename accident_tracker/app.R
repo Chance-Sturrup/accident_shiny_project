@@ -253,7 +253,7 @@ server <- function(input, output, session) {
   
   ##Add to package
   plot_by_sev <- function(var) {
-      if (var == "day.night" | var == "month" | var == "state" | var == "wthr.cat") {
+      if (var == "day.night" | var == "month" | var == "state" | var == "wthr.cat" | var == "hour") {
         ggplot(accidents_by_sev(), aes(.data[[var]], avg.sev)) +
           plot_geom() 
       } else {
@@ -278,6 +278,7 @@ server <- function(input, output, session) {
              month = geom_col(),
              state = geom_col(),
              wthr.cat = geom_col(),
+             hour = geom_col(),
              geom_freqpoly(aes(color = as.factor(severity)), bins = input$y)
       )
     # if (input$analysis == "all") {
@@ -293,8 +294,8 @@ server <- function(input, output, session) {
   
   accidents_by_sev <- reactive({
     accidents %>%
-      group_by(.data[[input$x]]) %>%
-      summarise(avg.sev = mean(severity))
+       group_by(.data[[input$x]]) %>%
+       summarise(avg.sev = mean(severity))
   })
   
   output$plot <- renderPlot({
