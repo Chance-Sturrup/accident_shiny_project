@@ -128,22 +128,22 @@ color_pal <- function(a){
          "None" =  colorBin("black", domain = NULL),
          "Severity" = colorFactor("YlOrRd", domain = us_accidents$severity),
          "Temperature (F)" = colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, bins = c(-50, 0, 32, 50, 80, 100, 175)),
-         "Precipitation" = colorBin("BrBG", domain = us_accidents$precip, bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 25)),
+         "Precipitation" = colorBin("BrBG", domain = us_accidents$precip, bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 2.0)),
          "Day/Night" = colorFactor("Dark2", domain = us_accidents$day.night),
          "Visibility" = colorBin("YlGnBu", domain = us_accidents$vis, bins = c(0, 0.5, 2, 150))
   )
 }
 
-color_data <- function(b){
-  switch(b,
-         "None" = us_accidents$severity,
-         "Severity" = us_accidents$severity,
-         "Temperature (F)" = us_accidents$temp,
-         "Precipitation" = us_accidents$precip,
-         "Day/Night" = us_accidents$day.night,
-         "Visibility" = us_accidents$vis,
-  )
-}
+# color_data <- function(b){
+#   switch(b,
+#          "None" = us_accidents$severity,
+#          "Severity" = us_accidents$severity,
+#          "Temperature (F)" = us_accidents$temp,
+#          "Precipitation" = us_accidents$precip,
+#          "Day/Night" = us_accidents$day.night,
+#          "Visibility" = us_accidents$vis,
+#   )
+# }
 
 legend_title <- function(c){
   switch(c,
@@ -156,22 +156,6 @@ legend_title <- function(c){
   )}
 
 server <- function(input, output, session) {
-  observe({
-    if (input$sunrise != "All") {
-      us_accidents <- filter(us_accidents, day.night == input$sunrise)
-    }
-    if (is.null(input$weather) == FALSE) {
-      us_accidents <- filter(us_accidents, wthr.cat %in% input$weather)
-    }
-    if (is.null(input$month) == FALSE) {
-      us_accidents <- filter(us_accidents, month %in% input$month)
-    }
-    if (is.null(input$hour) == FALSE) {
-      us_accidents <- filter(us_accidents, hour %in% input$hour)
-    }
-  }) # %>%
-    # bindEvent(input$update)
-  
   isolate({
     if ("mymap_center" %in% names(input)) {
       mapparams <- list(center = input$mymap_center,
@@ -181,8 +165,38 @@ server <- function(input, output, session) {
     }
   })
   
+ ## Add to package 
+  filter_if <- function(condition, success) {
+    if (condition) {
+      success
+    } else {
+      TRUE
+    }
+  }
+  
+  df <- reactive ({
+    us_accidents %>%
+      filter(filter_if(is.null(input$weather) == FALSE, wthr.cat %in% input$weather),
+             filter_if(input$sunrise != "All", day.night == input$sunrise),
+             filter_if(is.null(input$month) == FALSE, month %in% input$month),
+             filter_if(is.null(input$hour) == FALSE, hour %in% input$hour)
+      )
+  })
+  
+  color_data <- reactive({
+    switch(input$color,
+           "None" = df()$severity,
+           "Severity" = df()$severity,
+           "Temperature (F)" = df()$temp,
+           "Precipitation" = df()$precip,
+           "Day/Night" = df()$day.night,
+           "Visibility" = df()$vis,
+    )
+  })
+  
   output$mymap <- renderLeaflet({
-    leaflet(options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
+    leaflet(data = df(),
+            options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
       addTiles()
   })
@@ -194,35 +208,33 @@ server <- function(input, output, session) {
   #   "Weather: ", us_accidents$wthr.cond
   # ) %>% lapply(htmltools::HTML)
   
-  observe({
-    leafletProxy("mymap", data = us_accidents) %>%
-      clearShapes() %>%
-      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
-                       color = color_pal(input$color)(color_data(input$color)),
-                       fillOpacity = 0.7,
-                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
+ observe({
+   leafletProxy("mymap", data = df()) %>%
+     clearMarkerClusters() %>%
+     addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
+                      color = color_pal(input$color)(color_data()),
+                      fillOpacity = 0.7,
+                      clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
                                                              # shows all individual data points
                                                              # at zoom level 14
-                                                             spiderfyOnMaxZoom = FALSE),
-                       # label =labels,
-                       # labelOptions = labelOptions(style = list("font-weight" = "normal",
-                       #                                          padding = "3px 8px"),
-                       #                             textsize = "11px",
-                       #                             direction = "auto")
-      )
-  }) # %>%
-    # bindEvent(input$update)
-  
-  observe({
-    leafletProxy("mymap", data = us_accidents) %>%
-      clearControls() %>%
-      addLegend("bottomright",
-                pal = color_pal(input$color),
-                values = color_data(input$color),
-                title = legend_title(input$color),
-                opacity = 1)
-  }) # %>%
-    # bindEvent(input$update)
+                                                            spiderfyOnMaxZoom = FALSE) #,
+# label =labels,
+# labelOptions = labelOptions(style = list("font-weight" = "normal",
+#                                          padding = "3px 8px"),
+#                             textsize = "11px",
+#                             direction = "auto")
+     )
+ })
+
+ observe({
+   leafletProxy("mymap", data = df()) %>%
+     clearControls() %>%
+     addLegend("bottomright",
+               pal = color_pal(input$color),
+               values = color_data(),
+               title = legend_title(input$color),
+               opacity = 1)
+ })
   
   ##Adding this function to package
   histogram_plot <- function(x, y){
