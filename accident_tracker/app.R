@@ -158,25 +158,10 @@ server <- function(input, output, session) {
   })
   
   output$mymap <- renderLeaflet({
-    pal <- color_pal(input$color)
-    
     leaflet(data = df(),
             options = leafletOptions(minZoom = 4, maxZoom = 20)) %>%
       setView(lng = mapparams$center$lng, lat = mapparams$center$lat, zoom = mapparams$zoom) %>%
-      addTiles() # %>%
-      # addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
-      #                  color = pal(color_data(input$color)),
-      #                  fillOpacity = 0.7,
-      #                  clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
-      #                                                        # shows all individual data points
-      #                                                        # at zoom level 14
-      #                                                        spiderfyOnMaxZoom = FALSE)
-      # ) %>%
-      # addLegend("bottomright",
-      #           pal = color_pal(input$color),
-      #           values = color_data(input$color),
-      #           title = legend_title(input$color),
-      #           opacity = 1)
+      addTiles()
   })
   
   # labels <- sprintf(
@@ -188,13 +173,13 @@ server <- function(input, output, session) {
   
  observe({
    leafletProxy("mymap", data = df()) %>%
-     clearShapes() %>%
+     clearMarkerClusters() %>%
      addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
                       color = color_pal(input$color)(color_data()),
                       fillOpacity = 0.7,
                       clusterOptions = markerClusterOptions(disableClusteringAtZoom = 14,
- #                                                            # shows all individual data points
- #                                                            # at zoom level 14
+                                                             # shows all individual data points
+                                                             # at zoom level 14
                                                             spiderfyOnMaxZoom = FALSE) #,
 # label =labels,
 # labelOptions = labelOptions(style = list("font-weight" = "normal",
