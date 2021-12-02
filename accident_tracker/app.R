@@ -49,9 +49,10 @@ ui <- fluidPage(titlePanel("US Car Accidents in 2019"),
                                                  choices = select_options(
                                                    accidents,
                                                    hour),
-                                                 type = "multiple")
+                                                 type = "multiple"),
+                                    #actionButton("filter", "Filter Data")
                              ),
-                             actionButton("update", "Apply Changes")
+                             #actionButton("update", "Plot Data")
                            )
                   ),
                   tabPanel("Plot", fluid = TRUE,
@@ -155,13 +156,7 @@ legend_title <- function(c){
   )}
 
 server <- function(input, output, session) {
-<<<<<<< HEAD
-  output$mymap <- renderLeaflet({
-    input$update
-    
-=======
   observe({
->>>>>>> main
     if (input$sunrise != "All") {
       us_accidents <- filter(us_accidents, day.night == input$sunrise)
     }
@@ -174,7 +169,8 @@ server <- function(input, output, session) {
     if (is.null(input$hour) == FALSE) {
       us_accidents <- filter(us_accidents, hour %in% input$hour)
     }
-  })
+  }) # %>%
+    # bindEvent(input$update)
   
   isolate({
     if ("mymap_center" %in% names(input)) {
@@ -214,7 +210,8 @@ server <- function(input, output, session) {
                        #                             textsize = "11px",
                        #                             direction = "auto")
       )
-  })
+  }) # %>%
+    # bindEvent(input$update)
   
   observe({
     leafletProxy("mymap", data = us_accidents) %>%
@@ -224,7 +221,8 @@ server <- function(input, output, session) {
                 values = color_data(input$color),
                 title = legend_title(input$color),
                 opacity = 1)
-  })
+  }) # %>%
+    # bindEvent(input$update)
   
   ##Adding this function to package
   histogram_plot <- function(x, y){
