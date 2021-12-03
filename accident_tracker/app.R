@@ -10,44 +10,9 @@ library(accidenttracker)
 # Data obtained from Kaggle, https://www.kaggle.com/sobhanmoosavi/us-accidents
 ##########################################################################################
 
-# Load the data frame
-us_accidents <- accidents
-
 # Limit max visibility to 10 miles to make distribution easier to visualize
 accidents_vis <- accidents %>%
   mutate(vis = replace(vis, vis > 10, 10))
-
-##########################################################################################
-# Functions that Need to Be included in Package and Removed From App
-
-color_pal <- function(a){
-  switch(a,
-         "None" =  colorBin("black", domain = NULL),
-         "Severity" = colorFactor("YlOrRd", domain = us_accidents$severity),
-         "Temperature (F)" = colorBin("RdBu", reverse = TRUE, domain = us_accidents$temp, bins = c(-50, 0, 32, 50, 80, 100, 175)),
-         "Precipitation" = colorBin("BrBG", domain = us_accidents$precip, bins = c(0, 0.001, 0.05, 0.1, 0.3, 1, 2.0)),
-         "Day/Night" = colorFactor("Dark2", domain = us_accidents$day.night),
-         "Visibility" = colorBin("YlGnBu", domain = us_accidents$vis, bins = c(0, 0.5, 2, 150))
-  )}
-
-legend_title <- function(c){
-  switch(c,
-         "None" = "None",
-         "Severity" = "Accident Severity",
-         "Temperature (F)" = "Temperature (F)",
-         "Precipitation" = "Precipitation",
-         "Day/Night" = "Day/Night",
-         "Visibility" = "Visibility",
-  )}
-
-filter_if <- function(condition, success) {
-  if (condition) {
-    success
-  } else {
-    TRUE
-  }
-}
-
 
 ##########################################################################################
 
@@ -192,11 +157,11 @@ server <- function(input, output, session) {
   
   #Filter the dataframe according to UI input
   df <- reactive ({
-    us_accidents %>%
-      filter(filter_if(is.null(input$weather) == FALSE, wthr.cat %in% input$weather),
-             filter_if(input$sunrise != "All", day.night == input$sunrise),
-             filter_if(is.null(input$month) == FALSE, month %in% input$month),
-             filter_if(is.null(input$hour) == FALSE, hour %in% input$hour)
+    accidents %>%
+      filter(conditional_filter(is.null(input$weather) == FALSE, wthr.cat %in% input$weather),
+             conditional_filter(input$sunrise != "All", day.night == input$sunrise),
+             conditional_filter(is.null(input$month) == FALSE, month %in% input$month),
+             conditional_filter(is.null(input$hour) == FALSE, hour %in% input$hour)
       )
   }) %>%
     bindEvent(input$update)
@@ -228,7 +193,7 @@ server <- function(input, output, session) {
     leafletProxy("mymap", data = df()) %>%
       clearMarkerClusters() %>%
       addCircleMarkers(lng = ~ lng, lat = ~ lat, radius = 3,
-                       color = color_pal(input$color)(color_data()),
+                       color = color_pal(accidents, input$color)(color_data()),
                        fillOpacity = 0.7,
                        # Cluster datapoints to reduce load time
                        # shows all individual data points at zoom level 14
@@ -242,7 +207,7 @@ server <- function(input, output, session) {
     leafletProxy("mymap", data = df()) %>%
       clearControls() %>%
       addLegend("bottomright",
-                pal = color_pal(input$color),
+                pal = color_pal(accidents, input$color),
                 values = color_data(),
                 title = legend_title(input$color),
                 opacity = 1)
@@ -272,7 +237,7 @@ server <- function(input, output, session) {
   # Plot the graph
   output$plot <- renderPlot({
     switch(input$plottype,
-           dist = histogram_plot(input$plotby, input$bins),
+           dist = histogram_plot(accidents, input$plotby, input$bins),
            severity = plot_by_sev()
     )
   })
